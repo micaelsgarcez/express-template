@@ -1,40 +1,52 @@
+import AdminJSExpress from '@adminjs/express'
+import { Database, Resource } from '@adminjs/prisma'
+import { PrismaClient } from '@prisma/client'
+import { DMMFClass } from '@prisma/client/runtime'
+import AdminJS from 'adminjs'
+import express from 'express'
 
-import express from 'express';
+const PORT = process.env.port || 3000
 
-var app = express();
+const prisma = new PrismaClient()
 
-const users = [
-  {
-      id: 1,
-      name: "Lucas"
-  },
-  {
-      id: 2,
-      name: "Eric"
-  },
-  {
-      id: 3,
-      name: "Ana"
-  },
-];
+AdminJS.registerAdapter({ Database, Resource })
 
+const app = express()
 
-app.get('/', function(req:any, res:any){
-  res.send('Hello!');
-});
+// `_baseDmmf` contains necessary Model metadata. `PrismaClient` type doesn't have it included
+const dmmf = (prisma as any)._baseDmmf as DMMFClass
 
-app.get('/users', function(req:any, res:any){
-  res.send(users);
-});
+const admin = new AdminJS({
+  resources: [
+    {
+      resource: { model: dmmf.modelMap.Project, client: prisma },
+      options: {}
+    },
+    {
+      resource: { model: dmmf.modelMap.Challenge, client: prisma },
+      options: {}
+    },
+    {
+      resource: { model: dmmf.modelMap.ProjectStack, client: prisma },
+      options: {}
+    },
+    {
+      resource: { model: dmmf.modelMap.ChallengeStack, client: prisma },
+      options: {}
+    },
+    {
+      resource: { model: dmmf.modelMap.Tech, client: prisma },
+      options: {}
+    }
+  ]
+})
 
-app.get('/users/:userId', function(req:any, res:any){
-  const user = users.filter((user) => user.id == req.params.userId);
-  res.send(user);
-});
+const router = AdminJSExpress.buildRouter(admin)
 
-if (!module.parent) {
-  app.listen(3000);
-  console.log('Express started on port 3000');
-}
+app.use(admin.options.rootPath, router)
 
-export default app;
+app.listen(PORT, () => {
+  console.log(`Example app listening at http://localhost:${PORT}`)
+})
+
+export default app
